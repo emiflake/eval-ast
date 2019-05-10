@@ -41,15 +41,15 @@ void	print_node(t_ast_node *node)
 {
 	if (node == NULL)
 	{
-		printf("<null>");
+		printf("???");
 		return ;
 	}
 	if (node->type == E_BINOP)
 	{
 		printf("(");
-		printf("%c ", node->value.sub_node.op);
 		print_node(node->value.sub_node.lhs);
 		printf(" ");
+		printf("%c ", node->value.sub_node.op);
 		print_node(node->value.sub_node.rhs);
 		printf(")");
 	}
@@ -59,55 +59,63 @@ void	print_node(t_ast_node *node)
 	}
 }
 
-t_ast_node *parse_stage_num(char **str);
+t_ast_node *parse_stage_num(char **str, int *success);
 
-t_ast_node *parse_stage_1(char **str)
+t_ast_node *parse_stage_1(char **str, int *success)
 {
 	t_ast_node	*lhs;
 	t_ast_node	*rhs;
 	char		op;
 
-	lhs = parse_stage_num(str);
+	lhs = parse_stage_num(str, success);
 	if (lhs == NULL)
+	{
+		*success = 0;
 		return (NULL);
+	}
 	if (**str == '*' || **str == '/')
 	{
 		op = **str;
 		(*str)++;
-		rhs = parse_stage_1(str);
+		rhs = parse_stage_1(str, success);
 		return (mk_binop_node(lhs, op, rhs));
 	}
 	else
 	{
 		return (lhs);
 	}
+	*success = 0;
 	return (NULL);
 }
 
-t_ast_node *parse_stage_0(char **str)
+t_ast_node *parse_stage_0(char **str, int *success)
 {
 	t_ast_node	*lhs;
 	t_ast_node	*rhs;
 	char		op;
 
-	lhs = parse_stage_1(str);
+	lhs = parse_stage_1(str, success);
 	if (lhs == NULL)
+	{
+		*success = 0;
 		return (NULL);
+	}
 	if (**str == '+' || **str == '-')
 	{
 		op = **str;
 		(*str)++;
-		rhs = parse_stage_0(str);
+		rhs = parse_stage_0(str, success);
 		return (mk_binop_node(lhs, op, rhs));
 	}
 	else
 	{
 		return (lhs);
 	}
+	*success = 0;
 	return (NULL);
 }
 
-t_ast_node *parse_stage_num(char **str)
+t_ast_node *parse_stage_num(char **str, int *success)
 {
 	int			result;
 	t_ast_node	*res;
@@ -115,7 +123,7 @@ t_ast_node *parse_stage_num(char **str)
 	if (**str == '(')
 	{
 		(*str)++;
-		res = parse_stage_0(str);
+		res = parse_stage_0(str, success);
 		(*str)++;
 		return (res);
 	}
@@ -132,16 +140,17 @@ t_ast_node *parse_stage_num(char **str)
 	}
 	else
 	{
-		perror("We failed to parse");
+		*success = 0;
 		return NULL;
 	}
 }
 
-t_ast_node *parse_expr(char *str)
+t_ast_node *parse_expr(char **str, /*out*/ int *success)
 {
 	t_ast_node *res;
-
-	res = parse_stage_0(&str);
+	
+	*success = 1;
+	res = parse_stage_0(str, success);
 	return (res);
 }
 
@@ -173,11 +182,20 @@ int			evaluate(t_ast_node *node)
 
 int			main(int argc, char **argv)
 {
+	int success;
 	if (argc == 2)
 	{
-		t_ast_node *node = parse_expr(argv[1]);
+		t_ast_node *node = parse_expr(&argv[1], &success);
 		print_node(node);
-		printf("\nWill evaluate to: %d\n", evaluate(node));
+		if (success == 1)
+		{
+			printf("\nWill evaluate to: %d", evaluate(node));
+		}
+		else
+		{
+			printf("\nFailed to parse.");
+		}
+		
 	}
 	printf("\n");
 	return (0);
