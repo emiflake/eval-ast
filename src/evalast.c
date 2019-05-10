@@ -12,6 +12,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "ast.h"
 
 t_ast_node	*mk_binop_node(t_ast_node *lhs, char op, t_ast_node *rhs)
@@ -58,16 +59,126 @@ void	print_node(t_ast_node *node)
 	}
 }
 
-t_ast_node *parse_expr(char *str)
+t_ast_node *parse_stage_num(char **str);
+
+t_ast_node *parse_stage_1(char **str)
 {
-	(void)str;
+	t_ast_node	*lhs;
+	t_ast_node	*rhs;
+	char		op;
+
+	lhs = parse_stage_num(str);
+	if (lhs == NULL)
+		return (NULL);
+	if (**str == '*' || **str == '/')
+	{
+		op = **str;
+		(*str)++;
+		rhs = parse_stage_1(str);
+		return (mk_binop_node(lhs, op, rhs));
+	}
+	else
+	{
+		return (lhs);
+	}
 	return (NULL);
 }
 
-int			main(void)
+t_ast_node *parse_stage_0(char **str)
 {
-	t_ast_node *node = parse_expr("2 + 3");
-	print_node(node);
+	t_ast_node	*lhs;
+	t_ast_node	*rhs;
+	char		op;
+
+	lhs = parse_stage_1(str);
+	if (lhs == NULL)
+		return (NULL);
+	if (**str == '+' || **str == '-')
+	{
+		op = **str;
+		(*str)++;
+		rhs = parse_stage_0(str);
+		return (mk_binop_node(lhs, op, rhs));
+	}
+	else
+	{
+		return (lhs);
+	}
+	return (NULL);
+}
+
+t_ast_node *parse_stage_num(char **str)
+{
+	int			result;
+	t_ast_node	*res;
+
+	if (**str == '(')
+	{
+		(*str)++;
+		res = parse_stage_0(str);
+		(*str)++;
+		return (res);
+	}
+	else if (strchr("0123456789", **str) != NULL && **str != '\0')
+	{
+		result = 0;
+		while (strchr("0123456789", **str) != NULL && **str != '\0')
+		{
+			result = (result * 10) + (**str - '0');
+			(*str)++;
+		}
+		res = mk_num_node(result);
+		return (res);
+	}
+	else
+	{
+		perror("We failed to parse");
+		return NULL;
+	}
+}
+
+t_ast_node *parse_expr(char *str)
+{
+	t_ast_node *res;
+
+	res = parse_stage_0(&str);
+	return (res);
+}
+
+int			do_op(int a, char op, int b)
+{
+	switch (op)
+	{
+		case '+': return (a + b);
+		case '-': return (a - b);
+		case '*': return (a * b);
+		case '/': return (a / b);
+		default: return (0);
+	}
+}
+
+int			evaluate(t_ast_node *node)
+{
+	if (node->type == E_VALUE)
+	{
+		return (node->value.num);
+	}
+	else
+	{
+		t_ast_binop *b;
+		b = &node->value.sub_node;
+		return (do_op(evaluate(b->lhs), b->op, evaluate(b->rhs)));
+	}
+}
+
+int			main(int argc, char **argv)
+{
+	if (argc == 2)
+	{
+		t_ast_node *node = parse_expr(argv[1]);
+		print_node(node);
+		printf("\nWill evaluate to: %d\n", evaluate(node));
+	}
 	printf("\n");
 	return (0);
 }

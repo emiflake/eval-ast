@@ -12,7 +12,7 @@ WFLAGS=-Werror -Wextra -Wall
 CFLAGS=$(WFLAGS) $(IFLAGS)
 OBJECTS=$(patsubst %, $(OBJ_DIR)/%.o, $(OBJECT_NAMES))
 
-CC=clang
+CC=gcc
 
 all: $(NAME)
 $(NAME): $(OBJECTS)
